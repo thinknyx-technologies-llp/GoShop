@@ -2,8 +2,8 @@ package orders
 
 import (
 	"encoding/json"
-	"go-shop/backend/models"
-	"go-shop/database"
+	"GoShop/backend/models"
+	"GoShop/database"
 	"net/http"
 	"strconv"
 

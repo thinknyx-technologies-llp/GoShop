@@ -1,4 +1,4 @@
-# Project  Name
+# GoShop
 
 ## Go Capstone Project
 

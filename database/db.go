@@ -11,7 +11,7 @@ var DB *sql.DB // Use *sql.DB instead of *gorm.DB
 
 // Connect initializes and returns the *sql.DB instance
 func Connect() *sql.DB {
-	dsn := "root:Madhuri123!@#@tcp(localhost:3306)/shop"
+	dsn := "root:database_password@tcp(localhost:3306)/shop"
 	var err error
 	DB, err = sql.Open("mysql", dsn)
 	if err != nil {

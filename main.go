@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"go-shop/backend/orders"
-	"go-shop/backend/products"
-	"go-shop/database"
+	"GoShop/backend/orders"
+	"GoShop/backend/products"
+	"GoShop/database"
 
 	"net/http"
 

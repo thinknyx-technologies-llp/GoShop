@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Shop - Home</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body {
+            background-color: #f9f9e4;
+        }
+        .product-card {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .navbar-custom {
+            background-color: #343a40;
+        }
+        .navbar-custom .nav-link {
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 10px 20px;
+        }
+        .navbar-custom .nav-link:hover {
+            color: #86075a;
+            background-color: hsl(187, 81%, 52%);
+            border-radius: 5px;
+        }
+        .footer-custom {
+            background-color: #343a40;
+            color: #ffffff;
+        }
+        .sold-out {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-dark text-white p-3">
+        <div class="container">
+            <h1 class="text-center">Welcome to Go Shop</h1>
+            <nav class="navbar navbar-expand-lg navbar-custom">
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto">
+                        <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/user">User</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/admin/login">Admin</a></li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <main class="container mt-5">
+        <section>
+            <h2 class="text-center mb-4">Our Products</h2>
+            <div class="row" id="products">
+                <!-- Products will be dynamically loaded here -->
+            </div>
+        </section>
+    </main>
+    <footer class="footer-custom text-center p-3 mt-5">
+        <p>&copy; 2025 Go Shop...An Initiative by Thinknyx Technologies LLP. All rights reserved.</p>
+    </footer>
+
+    <!-- Unauthorized Modal -->
+    <div class="modal fade" id="unauthorizedModal" tabindex="-1" aria-labelledby="unauthorizedModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="unauthorizedModalLabel">Unauthorized</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    You are not authorized for this page.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="/static/scripts.js"></script>
+    <script>
+        async function loadProducts() {
+            try {
+                const response = await fetch('http://localhost:8081/products');
+                const products = await response.json();
+                const productsContainer = document.getElementById('products');
+                products.forEach(product => {
+                    const soldOutLabel = product.quantity === 0 ? '<div class="sold-out">Sold out!</div>' : '';
+                    const productCard = `
+                        <div class="col-md-4">
+                            <div class="card product-card">
+                                
+                                <div class="card-body">
+                                    <h5 class="card-title">${product.name}</h5>
+                                    <p class="card-text">Price: $${product.price}</p>
+                                    <p class="card-text">Quantity: ${product.quantity}</p>
+                                    ${soldOutLabel}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    productsContainer.innerHTML += productCard;
+                });
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadProducts);
+
+        // Function to show unauthorized modal
+        function showUnauthorizedModal() {
+            $('#unauthorizedModal').modal('show');
+        }
+
+        // Check if the unauthorized modal should be shown
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('unauthorized')) {
+                showUnauthorizedModal();
+            }
+        });
+    </script>
+</body>
+</html>

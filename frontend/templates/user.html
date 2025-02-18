@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Shop</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f9f9e4;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .popup {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Added shadow to cards */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">Available Products</h2>
+        <table id="productsTable" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="mb-4">Add to Cart</h2>
+                        <form id="cartForm">
+                            <div class="form-group" style="display: none;">
+                                <label for="productIdInput">Product ID</label>
+                                <input type="number" id="productIdInput" class="form-control" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="productSelect">Product Name</label>
+                                <select id="productSelect" class="form-control"></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="quantityInput">Quantity</label>
+                                <input type="number" id="quantityInput" class="form-control" min="1" value="1">
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="addToCart()">Add to Cart</button>
+                            <button type="button" id="placeOrderButton" class="btn btn-success" onclick="placeOrder()" disabled>Place Order</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="mb-4">Cart</h3>
+                        <div id="cartList" class="list-group"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay" class="overlay">
+        <div class="popup">
+            <button class="btn btn-danger" onclick="closePopup()">Close</button>
+            <pre id="popupContent"></pre>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script>
+        let products = [];
+
+        async function loadProducts() {
+            const res = await fetch("http://localhost:8081/products/");
+            let allProducts = await res.json();
+            products = allProducts.filter(product => product.quantity > 0);
+            if ($.fn.DataTable.isDataTable('#productsTable')) {
+                $('#productsTable').DataTable().clear().destroy();
+            }
+            $('#productsTable').DataTable({
+                data: products,
+                columns: [
+                    { data: 'id' },
+                    { data: 'name' },
+                    { data: 'price' },
+                    { data: 'quantity' },
+                ]
+            });
+            populateProductSelect();
+        }
+
+        function populateProductSelect() {
+            const productSelect = document.getElementById('productSelect');
+            productSelect.innerHTML = ''; // Clear existing options
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = product.name;
+                option.dataset.price = product.price;
+                productSelect.appendChild(option);
+            });
+        }
+
+        function addToCart() {
+            const productSelect = document.getElementById('productSelect');
+            const selectedOption = productSelect.options[productSelect.selectedIndex];
+            const productId = selectedOption.value;
+            const name = selectedOption.textContent;
+            const price = selectedOption.dataset.price;
+            const quantity = document.getElementById('quantityInput').value;
+
+            if (quantity <= 0) {
+                alert('Quantity must be greater than 0.');
+                return;
+            }
+
+            const totalPrice = price * quantity;
+
+            const cartList = document.getElementById('cartList');
+            const listItem = document.createElement('div');
+            listItem.className = 'list-group-item';
+            listItem.innerHTML = `
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">${name}</h5>
+                        <p class="card-text">Product ID: ${productId}</p>
+                        <p class="card-text">Quantity: ${quantity}</p>
+                        <p class="card-text">Total Price: $${totalPrice}</p>
+                    </div>
+                </div>
+            `;
+            cartList.appendChild(listItem);
+
+            document.getElementById('placeOrderButton').disabled = false; // Enable the "Place Order" button
+        }
+
+        function clearCart() {
+            const cartList = document.getElementById('cartList');
+            cartList.innerHTML = ''; // Clear all items in the cart
+            document.getElementById('placeOrderButton').disabled = true; // Disable the "Place Order" button
+        }
+
+        function placeOrder() {
+            const cartItems = [...document.querySelectorAll('#cartList .list-group-item')].map(item => {
+                const productId = item.querySelector('.card-text:nth-child(2)').textContent.split(': ')[1];
+                const name = item.querySelector('.card-title').textContent;
+                const quantity = item.querySelector('.card-text:nth-child(3)').textContent.split(': ')[1];
+                return { product_id: parseInt(productId), name: name, quantity: parseInt(quantity) };
+            });
+
+            fetch('http://localhost:8081/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(cartItems)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.bill) {
+                    showPopup(data);
+                    clearCart(); // Clear the cart after placing the order
+                    loadProducts(); // Call loadProducts again after placing the order
+                } else {
+                    alert('Failed to place order!\nPRODUCT OUT OF STOCK!!!');
+                    const overlay = document.getElementById('overlay');
+                    const popupContent = document.getElementById('popupContent');
+                    popupContent.innerHTML = `
+                        <h3 style="color: red; font-weight: bold;">PRODUCT OUT OF STOCK!!!</h3>
+                    `;
+                    overlay.style.display = 'flex';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to place order.');
+            });
+        }
+
+        function showPopup(data) {
+            const overlay = document.getElementById('overlay');
+            const popupContent = document.getElementById('popupContent');
+            popupContent.innerHTML = `
+            <h3>Order Summary</h3>
+            <h4>Bill Details</h4>
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <th>Product ID</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${data.bill.details.map(detail => `
+                    <tr>
+                    <td>${detail.product_id}</td>
+                    <td>${detail.price}</td>
+                    <td>${detail.quantity}</td>
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table>
+            <h4>Total Amount: $${data.bill.total_amount}</h4>
+            <h4>Order Details</h4>
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Product ID</th>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Total Price</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${data.orders.map(order => `
+                    <tr>
+                    <td>${order.id}</td>
+                    <td>${order.product_id}</td>
+                    <td>${order.name}</td>
+                    <td>${order.quantity}</td>
+                    <td>${order.price}</td>
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table>
+            `;
+            overlay.style.display = 'flex';
+        }
+
+        function closePopup() {
+            const overlay = document.getElementById('overlay');
+            overlay.style.display = 'none';
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>

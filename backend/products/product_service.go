@@ -3,8 +3,8 @@ package products
 import (
 	"database/sql"
 	"encoding/json"
-	"go-shop/backend/models"
-	"go-shop/database"
+	"GoShop/backend/models"
+	"GoShop/database"
 	"log"
 	"net/http"
 	"strconv"

@@ -1,4 +1,4 @@
-module go-shop
+module GoShop
 
 go 1.23.3
 

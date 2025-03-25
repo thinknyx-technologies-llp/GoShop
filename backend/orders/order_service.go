@@ -1,16 +1,16 @@
 package orders
 
 import (
-	"encoding/json"
 	"GoShop/backend/models"
 	"GoShop/database"
+	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetOrders(c *gin.Context) {
+func GetOrdersService(c *gin.Context) {
 	rows, err := database.DB.Query("SELECT id, product_id, quantity, price FROM orders")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -31,7 +31,13 @@ func GetOrders(c *gin.Context) {
 	c.JSON(http.StatusOK, orders)
 }
 
-func PlaceOrders(c *gin.Context) {
+// Define bill details struct
+type Bill struct {
+	Details     []models.Order `json:"details"`
+	TotalAmount int            `json:"total_amount"`
+}
+
+func PlaceOrdersService(c *gin.Context) {
 	var orders []models.Order
 	if err := json.NewDecoder(c.Request.Body).Decode(&orders); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -44,9 +50,9 @@ func PlaceOrders(c *gin.Context) {
 		return
 	}
 
+	// Declare billDetails and totalAmount here
+	var billDetails []models.Order
 	var totalAmount int
-	var billDetails []gin.H
-	var returningOrder []gin.H
 
 	for _, order := range orders {
 		var price, availableQuantity int
@@ -63,45 +69,40 @@ func PlaceOrders(c *gin.Context) {
 			return
 		}
 
-		price = price * order.Quantity
-		totalAmount += order.Quantity * price
+		totalPrice := price * order.Quantity
+		totalAmount += totalPrice
 
-		result, err := tx.Exec("INSERT INTO orders (product_id, quantity, price) VALUES (?, ?, ?)", order.ProductID, order.Quantity, price)
+		_, err = tx.Exec("INSERT INTO orders (product_id, quantity, price) VALUES (?, ?, ?)", order.ProductID, order.Quantity, totalPrice)
 		if err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		orderID, err := result.LastInsertId()
+		res, err := tx.Exec("UPDATE products SET quantity = quantity - ? WHERE id = ? AND quantity >= ?", order.Quantity, order.ProductID, order.Quantity)
 		if err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		_, err = tx.Exec("UPDATE products SET quantity = quantity - ? WHERE id = ?", order.Quantity, order.ProductID)
+		rowsAffected, err := res.RowsAffected()
 		if err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		if rowsAffected == 0 {
+			tx.Rollback()
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient stock. Order could not be placed."})
+			return
+		}
 
-		returningOrder = append(returningOrder, gin.H{
-			"product_id":        order.ProductID,
-			"quantity":          order.Quantity,
-			"name":              order.Name,
-			"id":                orderID,
-			"price":             price,
-			"availableQuantity": availableQuantity,
-		})
-
-		billDetails = append(billDetails, gin.H{
-			"product_id":        order.ProductID,
-			"quantity":          order.Quantity,
-			"price":             price,
-			"fetched_price":     price,
-			"availableQuantity": availableQuantity,
+		// Append order details to billDetails
+		billDetails = append(billDetails, models.Order{
+			ProductID: order.ProductID,
+			Quantity:  order.Quantity,
+			Price:     totalPrice,
 		})
 	}
 
@@ -111,20 +112,28 @@ func PlaceOrders(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"orders": returningOrder,
-		"bill": gin.H{
-			"total_amount": totalAmount,
-			"details":      billDetails,
+	c.JSON(http.StatusCreated, gin.H{"message": "Order placed successfully",
+		"bill": Bill{
+			Details:     billDetails,
+			TotalAmount: totalAmount,
 		},
+		"orders": billDetails,
 	})
 }
 
-func ItemExists(id int) bool {
-	var exists bool
-	err := database.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE id=? AND quantity >= 1)", id).Scan(&exists)
+func CheckItemExistsService(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return false
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+		return
 	}
-	return exists
+
+	var exists bool
+	err = database.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM products WHERE id=? AND quantity >= 1)", id).Scan(&exists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"exists": exists})
 }

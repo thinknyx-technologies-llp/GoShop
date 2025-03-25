@@ -1,8 +1,8 @@
 package orders
 
 import (
+	"GoShop/database"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,13 +16,29 @@ func RegisterRoutes(router *gin.Engine) {
 	}
 }
 
-func CheckItemExists(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid item ID"})
+func GetOrders(c *gin.Context) {
+	if !database.DBConnected {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database not available"})
 		return
 	}
+	// Call the service function
+	GetOrdersService(c)
+}
 
-	exists := ItemExists(id)
-	c.JSON(http.StatusOK, gin.H{"exists": exists})
+func PlaceOrders(c *gin.Context) {
+	if !database.DBConnected {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database not available"})
+		return
+	}
+	// Call the service function
+	PlaceOrdersService(c)
+}
+
+func CheckItemExists(c *gin.Context) {
+	if !database.DBConnected {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database not available"})
+		return
+	}
+	// Call the service function
+	CheckItemExistsService(c)
 }

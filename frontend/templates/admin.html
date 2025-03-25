@@ -83,84 +83,13 @@
             </tbody>
         </table>
     </div>
-
-    <script>
-        document.getElementById("addProductForm").addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const productID = document.getElementById("productID").value;
-            const name = document.getElementById("name").value;
-            const quantity = document.getElementById("quantity").value;
-            const price = document.getElementById("price").value;
-
-            if (!productID || !name || !quantity || !price) {
-                alert("All fields are required.");
-                return;
-            }
-
-            await fetch("http://localhost:8080/product/add", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: parseInt(productID), name, quantity: parseInt(quantity), price: parseInt(price) })
-            });
-
-            alert("Product Added!");
-            loadProducts(); // Call the function to refresh the table
-        });
-
-        // Bootstrap validation
-        (function() {
-            'use strict';
-            window.addEventListener('load', function() {
-                var forms = document.getElementsByClassName('needs-validation');
-                var validation = Array.prototype.filter.call(forms, function(form) {
-                    form.addEventListener('submit', function(event) {
-                        if (form.checkValidity() === false) {
-                            event.preventDefault();
-                            event.stopPropagation();
-                        }
-                        form.classList.add('was-validated');
-                    }, false);
-                });
-            }, false);
-        })();
-
-        function loadProducts() {
-            fetch('http://localhost:8080/products')
-                .then(response => response.json())
-                .then(data => {
-                    const tbody = document.querySelector('#productTable tbody');
-                    tbody.innerHTML = '';
-                    data.forEach(product => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${product.id}</td>
-                            <td>${product.name}</td>
-                            <td>${product.quantity}</td>
-                            <td>${product.price}</td>
-                            <td><button class="btn btn-danger btn-sm deleteBtn" data-id="${product.id}">Delete</button></td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                });
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            loadProducts();
-
-            document.querySelector('#productTable tbody').addEventListener('click', function(event) {
-                if (event.target.classList.contains('deleteBtn')) {
-                    const productId = event.target.getAttribute('data-id');
-                    fetch(`http://localhost:8080/product/delete/${productId}`, {
-                        method: 'DELETE'
-                    }).then(() => {
-                        loadProducts();
-                    });
-                }
-            });
-        });
-    </script>
+    
+    <!-- Bootstrap JS and Dependencies -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- Link your JavaScript file -->
+    <script src="static/script.js"></script>
 </body>
 </html>
